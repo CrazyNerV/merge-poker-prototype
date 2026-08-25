@@ -25,13 +25,37 @@ function hasReliefMerge(){for(let col=0;col<4;col++){for(let a=0;a<ROWS;a++)for(
 function flash(text){fx.textContent=text;fx.classList.remove('pop');void fx.offsetWidth;fx.classList.add('pop')}
 function showToast(text){toast.textContent=text;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1800)}
 const LEADERBOARD_KEY='merge-poker-leaderboard-v1';
+const backendConfig=window.MERGE_POKER_BACKEND||{};
+const leaderboardApi=backendConfig.url&&backendConfig.publishableKey&&window.supabase?.createClient
+  ? window.supabase.createClient(backendConfig.url,backendConfig.publishableKey)
+  : null;
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
-function loadLeaderboard(){try{const data=JSON.parse(localStorage.getItem(LEADERBOARD_KEY)||'[]');return Array.isArray(data)?data.slice(0,100):[]}catch{return[]}}
-function saveLeaderboard(entries){try{localStorage.setItem(LEADERBOARD_KEY,JSON.stringify(entries.slice(0,100)))}catch{}}
+function loadLocalLeaderboard(){try{const data=JSON.parse(localStorage.getItem(LEADERBOARD_KEY)||'[]');return Array.isArray(data)?data.slice(0,100):[]}catch{return[]}}
+function saveLocalLeaderboard(entries){try{localStorage.setItem(LEADERBOARD_KEY,JSON.stringify(entries.slice(0,100)))}catch{}}
+async function loadLeaderboard(){
+  if(!leaderboardApi)return loadLocalLeaderboard();
+  const{data,error}=await leaderboardApi.from('leaderboard').select('player_name,score,slice_score,spins_left,play_time,created_at').order('score',{ascending:false}).order('play_time',{ascending:true}).limit(100);
+  if(error)throw error;
+  return data.map(row=>({name:row.player_name,score:row.score,sliceScore:row.slice_score,spinsLeft:row.spins_left,elapsed:row.play_time,date:row.created_at}));
+}
+async function persistScore(record,entries){
+  if(leaderboardApi){
+    const{error}=await leaderboardApi.from('leaderboard').insert({player_name:record.name,score:record.score,slice_score:record.sliceScore,spins_left:record.spinsLeft,play_time:record.elapsed});
+    if(error)throw error;
+    return loadLeaderboard();
+  }
+  entries.push(record);entries.sort((a,b)=>b.score-a.score||a.elapsed-b.elapsed);saveLocalLeaderboard(entries);return entries.slice(0,100);
+}
 function getFinalScore(){const elapsed=Math.max(0,Math.floor((Date.now()-(startedAt??Date.now()))/1000));return{elapsed,finalScore:sliceScore+spinsLeft*1000-elapsed*10}}
 function leaderboardHtml(entries){if(!entries.length)return'<p class="empty-board">아직 등록된 기록이 없습니다.</p>';return `<ol class="leaderboard">${entries.map((entry,index)=>`<li><b>${index+1}</b><span>${escapeHtml(entry.name)}</span><strong>${entry.score.toLocaleString()}</strong></li>`).join('')}</ol>`}
-function showLeaderboardResult(kicker,title,reason,result,entries){showModal(kicker,title,`<p>${reason}</p><div class="score-formula"><span>SLICE ${sliceScore.toLocaleString()}</span><span>SPIN ${spinsLeft} × 1,000</span><span>TIME ${result.elapsed}s × 10</span><strong>FINAL ${result.finalScore.toLocaleString()}</strong></div><h2>LOCAL TOP 100</h2>${leaderboardHtml(entries)}`,'새 게임',reset)}
-function finishGame(kicker,title,reason){if(gameEnded)return;gameEnded=true;busy=true;const result=getFinalScore(),entries=loadLeaderboard();const qualifies=entries.length<100||result.finalScore>(entries[entries.length-1]?.score??-Infinity);if(!qualifies){showLeaderboardResult(kicker,title,reason,result,entries);return}showModal(kicker,title,`<p>${reason}</p><div class="score-formula"><span>SLICE ${sliceScore.toLocaleString()}</span><span>SPIN ${spinsLeft} × 1,000</span><span>TIME ${result.elapsed}s × 10</span><strong>FINAL ${result.finalScore.toLocaleString()}</strong></div><label class="name-entry">TOP 100 기록 이름<input id="player-name" maxlength="16" autocomplete="nickname" placeholder="PLAYER"></label>`,'기록 저장',()=>{const input=document.querySelector('#player-name'),name=input?.value.trim()||'PLAYER';entries.push({name,score:result.finalScore,sliceScore,spinsLeft,elapsed:result.elapsed,date:new Date().toISOString()});entries.sort((a,b)=>b.score-a.score||a.elapsed-b.elapsed);saveLeaderboard(entries);showLeaderboardResult(kicker,title,reason,result,entries.slice(0,100))})}
+function showLeaderboardResult(kicker,title,reason,result,entries){showModal(kicker,title,`<p>${reason}</p><div class="score-formula"><span>SLICE ${sliceScore.toLocaleString()}</span><span>SPIN ${spinsLeft} × 1,000</span><span>TIME ${result.elapsed}s × 10</span><strong>FINAL ${result.finalScore.toLocaleString()}</strong></div><h2>${leaderboardApi?'GLOBAL':'LOCAL'} TOP 100</h2>${leaderboardHtml(entries)}`,'새 게임',reset)}
+async function finishGame(kicker,title,reason){
+  if(gameEnded)return;gameEnded=true;busy=true;const result=getFinalScore();let entries;
+  try{entries=await loadLeaderboard()}catch{entries=loadLocalLeaderboard();showToast('리더보드 연결 실패 · 로컬 모드')}
+  const qualifies=entries.length<100||result.finalScore>(entries[entries.length-1]?.score??-Infinity);
+  if(!qualifies){showLeaderboardResult(kicker,title,reason,result,entries);return}
+  showModal(kicker,title,`<p>${reason}</p><div class="score-formula"><span>SLICE ${sliceScore.toLocaleString()}</span><span>SPIN ${spinsLeft} × 1,000</span><span>TIME ${result.elapsed}s × 10</span><strong>FINAL ${result.finalScore.toLocaleString()}</strong></div><label class="name-entry">TOP 100 기록 이름<input id="player-name" maxlength="16" autocomplete="nickname" placeholder="PLAYER"></label>`,'기록 저장',async()=>{const input=document.querySelector('#player-name'),name=input?.value.trim()||'PLAYER',record={name,score:result.finalScore,sliceScore,spinsLeft,elapsed:result.elapsed,date:new Date().toISOString()};const button=document.querySelector('#modal-btn');button.disabled=true;button.textContent='저장 중…';let latest;try{latest=await persistScore(record,entries)}catch{entries.push(record);entries.sort((a,b)=>b.score-a.score||a.elapsed-b.elapsed);saveLocalLeaderboard(entries);latest=entries.slice(0,100);showToast('서버 저장 실패 · 로컬 저장')}showLeaderboardResult(kicker,title,reason,result,latest)})
+}
 function openHelp(){showModal('HOW TO PLAY','Merge Poker',`<ol><li>게임은 <strong>10 SPINS</strong>으로 시작합니다.</li><li>같은 Line의 동일 카드를 Merge해 Rank를 올립니다.</li><li>완성된 Poker Hand를 Swipe해 행과 FIX 블록을 소거합니다.</li><li>완성된 <strong>Five Cards</strong> 소거 시 SPIN +1을 얻습니다.</li></ol><p>FIX의 Rank 9는 Merge 대상이 아니며, FIX 라인의 모든 블록을 소거하면 Stage Clear입니다.</p>`,'계속하기',closeModal)}
 function showModal(kicker,title,body,button,action){document.querySelector('#modal-kicker').textContent=kicker;document.querySelector('#modal-title').textContent=title;document.querySelector('#modal-body').innerHTML=body;const btn=document.querySelector('#modal-btn');btn.textContent=button;btn.onclick=action;document.querySelector('#modal').classList.remove('hidden')}
 function closeModal(){document.querySelector('#modal').classList.add('hidden')}
