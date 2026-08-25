@@ -1,0 +1,129 @@
+.card .rank {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(30px, 11vw, 58px);
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.card .rank small {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  margin: 0;
+  font-size: clamp(12px, 4vw, 19px);
+  line-height: 1;
+}
+
+.card .suit {
+  display: none;
+}
+
+.card .fix-tag {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+}
+
+/* Suit color language: Spade / Heart / Diamond / Club */
+.column-heads .spade,
+.card.suit-spade,
+.reel.suit-spade {
+  color: #171a20;
+}
+
+.column-heads .heart,
+.card.suit-heart,
+.reel.suit-heart {
+  color: #e34f5f;
+}
+
+.column-heads .diamond,
+.card.suit-diamond,
+.reel.suit-diamond {
+  color: #3f8df5;
+}
+
+.column-heads .club,
+.card.suit-club,
+.reel.suit-club {
+  color: #25a866;
+}
+
+.column-heads .spade {
+  width: 27px;
+  height: 27px;
+  justify-self: center;
+  border-radius: 50%;
+  background: #f2f4f7;
+  color: #171a20;
+  line-height: 27px;
+}
+
+.reel.suit-spade {
+  background: linear-gradient(#e9edf2, #bfc7d1);
+}
+
+.column-heads {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) 62px;
+}
+
+.column-heads .hand-head {
+  align-self: center;
+  color: #54d5d0;
+  font: 900 8px Inter, sans-serif;
+  letter-spacing: 0.12em;
+}
+
+.board-area {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px;
+  gap: 5px;
+}
+
+.hand-status {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.hand-state {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 3px;
+  border: 1px solid #26364e;
+  border-radius: 7px;
+  background: rgba(4, 10, 18, 0.55);
+  color: #56677f;
+  font-size: 7px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.hand-state.ready {
+  border-color: #ffc85c;
+  background: linear-gradient(145deg, rgba(255, 200, 92, 0.22), rgba(84, 213, 208, 0.12));
+  color: #ffc85c;
+  box-shadow: inset 0 0 12px rgba(255, 200, 92, 0.12);
+}
+
+.hand-state.ready small {
+  display: block;
+  margin-top: 2px;
+  color: #54d5d0;
+  font-size: 5px;
+  letter-spacing: 0.08em;
+}
+
+.hand-state.ready strong {
+  display: block;
+  margin-top: 3px;
+  color: #f7f0df;
+  font-size: 9px;
+  line-height: 1;
+}

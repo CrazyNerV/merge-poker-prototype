@@ -1,0 +1,60 @@
+const SUITS=[{symbol:'♠',red:false},{symbol:'♥',red:true},{symbol:'♦',red:true},{symbol:'♣',red:false}];
+const RANKS=['1','2','3','4','5','6','7','8','9'];
+const ROWS=7,COLS=5,GOAL=10000,HAND_SCORE={'One Pair':100,'Two Pair':250,'Three of a Kind':400,'Straight':700,'Full House':1000,'Four of a Kind':1600,'Five of a Kind':3000};
+let grid=[],fix=[],score=0,spins=0,drag=null,hands=[],pointerStart=null,pointerRow=null,chain=0,busy=false;
+const board=document.querySelector('#board'),spinBtn=document.querySelector('#spin-btn'),fx=document.querySelector('#fx'),toast=document.querySelector('#toast');
+function weightedRank(){let n=Math.random()*45;for(let r=0;r<9;r++){n-=9-r;if(n<0)return r}return 8}
+function reset(){grid=Array.from({length:4},()=>Array(ROWS).fill(null));fix=Array.from({length:ROWS},()=>({suit:Math.floor(Math.random()*4),rank:weightedRank()}));score=0;spins=0;drag=null;hands=[];chain=0;busy=false;closeModal();render()}
+function getCard(row,col){return col===4?fix[row]:grid[col][row]}
+function render(){detectHands();board.innerHTML='';for(let row=0;row<ROWS;row++){for(let col=0;col<COLS;col++){const card=getCard(row,col),cell=document.createElement('div');cell.className=`cell ${col===4?'fix-cell':''} ${hands.some(h=>h.row===row)?'hand':''}`;cell.dataset.row=row;cell.dataset.col=col;if(card){const suit=SUITS[card.suit];cell.innerHTML=`<div class="card ${suit.red?'red':''} ${col===4?'fix-card':''}" draggable="${col<4}"><div class="rank">${RANKS[card.rank]}<small>${suit.symbol}</small></div><div class="suit">${suit.symbol}</div>${col===4?'<div class="fix-tag">FIXED</div>':''}</div>`}if(hands.some(h=>h.row===row)&&col===2){const h=hands.find(x=>x.row===row),label=document.createElement('div');label.className='hand-label';label.style.top=`${(row+.5)*100/ROWS}%`;label.textContent=`${h.name} · SWIPE`;board.parentElement.appendChild(label);setTimeout(()=>label.remove(),0)}bindCell(cell,row,col);board.appendChild(cell)}}document.querySelector('#score').textContent=score.toLocaleString();document.querySelector('#spin-count').textContent=spins;document.querySelector('#progress-fill').style.width=`${Math.min(100,score/GOAL*100)}%`;spinBtn.disabled=busy||!canSpin();renderReels();if(!canSpin()&&!hasReliefMerge())gameOver()}
+function renderReels(results){document.querySelector('#reels').innerHTML=SUITS.map((s,i)=>`<div class="reel ${s.red?'red':''} ${results?'rolling':''}"><strong>${results?RANKS[results[i]]:s.symbol}</strong><small>${s.symbol} LINE</small></div>`).join('')}
+function bindCell(cell,row,col){cell.ondragstart=e=>{if(col===4||!getCard(row,col)){e.preventDefault();return}drag={row,col};e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',`${row},${col}`);cell.firstChild.classList.add('dragging')};cell.ondragover=e=>{if(drag)e.preventDefault()};cell.ondrop=e=>{e.preventDefault();mergeTo(row,col)};cell.ondragend=()=>{drag=null;render()};cell.onpointerdown=e=>{if(hands.some(h=>h.row===row)){pointerStart=e.clientX;pointerRow=row;cell.setPointerCapture?.(e.pointerId)}};cell.onpointermove=e=>{if(pointerRow===row&&Math.abs(e.clientX-pointerStart)>15)markSlice(row)};cell.onpointerup=e=>{if(pointerRow===row&&Math.abs(e.clientX-pointerStart)>70)clearHand(row);pointerStart=null;pointerRow=null;render()}}
+function canSpin(){return grid.some(col=>col.some(x=>x===null))||fix.some(card=>card===null)}
+function spin(){if(!canSpin()||busy)return;busy=true;chain=0;const results=SUITS.map(()=>weightedRank());renderReels(results);spinBtn.disabled=true;setTimeout(()=>{for(let col=0;col<4;col++)for(let row=0;row<ROWS;row++)if(grid[col][row]===null)grid[col][row]={suit:col,rank:weightedRank()};for(let row=0;row<ROWS;row++)if(fix[row]===null)fix[row]={suit:Math.floor(Math.random()*4),rank:weightedRank()};spins++;busy=false;flash('FULL SPIN!');render()},430)}
+function insert(col,card){const row=grid[col].findIndex(x=>x!==null);if(row===-1){grid[col][ROWS-1]=card;return}grid[col][row-1]=card}
+function insertFix(card){const row=fix.findIndex(x=>x!==null);if(row===-1){fix[ROWS-1]=card;return}fix[row-1]=card}
+function mergeTo(row,col){if(!drag||busy)return;const from=getCard(drag.row,drag.col),target=getCard(row,col),source={...drag};drag=null;if(!from||!target||source.col===col&&source.row===row||from.suit!==target.suit||from.rank!==target.rank){showToast('동일한 무늬와 Rank만 Merge할 수 있어요');render();return}if(col<4&&col!==source.col){showToast('Production 카드는 같은 Line 안에서 Merge하세요');render();return}if(from.rank===8){grid[source.col][source.row]=null;if(col<4)grid[col][row]=null;else{fix[row]=null;gravityFix()}score+=2500;gravity(source.col);if(col<4)gravity(col);flash('MAX MERGE');showToast('9 + 9 Max Merge!');render();return}if(col===4)fix[row].rank++;else grid[col][row].rank++;grid[source.col][source.row]=null;score+=50*(from.rank+1);gravity(source.col);chain=0;flash(`${RANKS[from.rank+1]} MERGE`);render()}
+function gravity(col){const cards=grid[col].filter(Boolean);grid[col]=Array(ROWS-cards.length).fill(null).concat(cards)}
+function gravityFix(){const cards=fix.filter(Boolean);fix=Array(ROWS-cards.length).fill(null).concat(cards)}
+function detectHands(){hands=[];for(let row=0;row<ROWS;row++){const cards=Array.from({length:5},(_,c)=>getCard(row,c));if(cards.some(x=>!x))continue;const name=evaluate(cards.map(x=>x.rank));if(name)hands.push({row,name})}}
+function evaluate(ranks){const count={};ranks.forEach(r=>count[r]=(count[r]||0)+1);const groups=Object.values(count).sort((a,b)=>b-a),unique=[...new Set(ranks)].sort((a,b)=>a-b),straight=unique.length===5&&unique[4]-unique[0]===4;if(groups[0]===5)return'Five of a Kind';if(groups[0]===4)return'Four of a Kind';if(groups[0]===3&&groups[1]===2)return'Full House';if(straight)return'Straight';if(groups[0]===3)return'Three of a Kind';if(groups[0]===2&&groups[1]===2)return'Two Pair';if(groups[0]===2)return'One Pair';return null}
+function markSlice(row){[...board.children].forEach((el,i)=>el.classList.toggle('slice-mark',Math.floor(i/COLS)===row))}
+function clearHand(row){const hand=hands.find(h=>h.row===row);if(!hand)return;chain++;for(let col=0;col<4;col++){grid[col][row]=null;gravity(col)}fix[row]=null;gravityFix();const gain=HAND_SCORE[hand.name]*chain;score+=gain;flash(`${hand.name.toUpperCase()} · ${chain} CHAIN`);showToast(`${hand.name} +${gain.toLocaleString()}`);render();if(score>=GOAL)win()}
+function hasReliefMerge(){for(let col=0;col<4;col++){for(let a=0;a<ROWS;a++)for(let b=a+1;b<ROWS;b++)if(grid[col][a]&&grid[col][b]&&grid[col][a].rank===grid[col][b].rank)return true;for(let row=0;row<ROWS;row++)if(grid[col][row]&&fix[row]&&grid[col][row].rank===fix[row].rank&&grid[col][row].suit===fix[row].suit)return true}return hands.length>0}
+function flash(text){fx.textContent=text;fx.classList.remove('pop');void fx.offsetWidth;fx.classList.add('pop')}
+function showToast(text){toast.textContent=text;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1800)}
+function openHelp(){showModal('HOW TO PLAY','Merge Poker',`<ol><li><strong>SPIN</strong>으로 네 Suit 카드를 동시에 생산합니다.</li><li>같은 Line의 동일 카드를 Drag & Drop해 1부터 9까지 Rank를 올립니다.</li><li>Production 카드를 같은 카드인 <strong>FIX</strong>에 놓아 FIX도 성장시킬 수 있습니다.</li><li>가로 5장이 Poker Hand가 되면 빛나는 Row를 좌우로 Swipe해 소거합니다.</li></ol><p>FIX 카드는 움직이지 않으며, 9+9는 Max Merge로 소거됩니다.</p>`,'계속하기',closeModal)}
+function showModal(kicker,title,body,button,action){document.querySelector('#modal-kicker').textContent=kicker;document.querySelector('#modal-title').textContent=title;document.querySelector('#modal-body').innerHTML=body;const btn=document.querySelector('#modal-btn');btn.textContent=button;btn.onclick=action;document.querySelector('#modal').classList.remove('hidden')}
+function closeModal(){document.querySelector('#modal').classList.add('hidden')}
+function gameOver(){busy=true;showModal('NO MORE MOVES','Game Over',`<p>생산 공간과 유효한 Merge가 없습니다.</p><p><strong>${spins} SPIN · ${score.toLocaleString()} SCORE</strong></p>`,'다시 도전',reset)}
+function win(){busy=true;showModal('GOAL COMPLETE','Stage Clear!',`<p>목표 점수 10,000점을 달성했습니다.</p><p><strong>${spins} SPIN · ${score.toLocaleString()} SCORE</strong></p>`,'새 게임',reset)}
+const SUIT_CLASS=['suit-spade','suit-heart','suit-diamond','suit-club'];
+const suitColorObserver=new MutationObserver(()=>{
+  board.querySelectorAll('.cell').forEach(cell=>{
+    const card=cell.querySelector('.card');
+    if(!card)return;
+    const row=Number(cell.dataset.row),col=Number(cell.dataset.col),data=getCard(row,col);
+    if(data)card.classList.add(SUIT_CLASS[data.suit]);
+  });
+  document.querySelectorAll('.reel').forEach((reel,index)=>reel.classList.add(SUIT_CLASS[index]));
+});
+suitColorObserver.observe(board,{childList:true,subtree:true});
+function renderHandStatus(){
+  const rail=document.querySelector('#hand-status');
+  if(!rail)return;
+  rail.innerHTML=Array.from({length:ROWS},(_,row)=>{
+    const hand=hands.find(item=>item.row===row);
+    const reward=hand?HAND_SCORE[hand.name]*(chain+1):0;
+    return hand
+      ? `<div class="hand-state ready"><span>${hand.name}</span><strong>+${reward.toLocaleString()}</strong><small>SWIPE</small></div>`
+      : '<div class="hand-state"><span>—</span></div>';
+  }).join('');
+}
+const handStatusObserver=new MutationObserver(renderHandStatus);
+handStatusObserver.observe(board,{childList:true});
+const reelColorObserver=new MutationObserver(()=>document.querySelectorAll('.reel').forEach((reel,index)=>reel.classList.add(SUIT_CLASS[index])));
+reelColorObserver.observe(document.querySelector('#reels'),{childList:true});
+let mobileDrag=null;
+board.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;const cell=e.target.closest('.cell');if(!cell)return;const row=Number(cell.dataset.row),col=Number(cell.dataset.col);if(col<4&&getCard(row,col)&&!hands.some(h=>h.row===row))mobileDrag={row,col}},true);
+board.addEventListener('pointerup',e=>{if(!mobileDrag)return;const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.cell');if(target){drag=mobileDrag;mergeTo(Number(target.dataset.row),Number(target.dataset.col))}mobileDrag=null},true);
+spinBtn.onclick=spin;document.querySelector('#help-btn').onclick=openHelp;reset();openHelp();
