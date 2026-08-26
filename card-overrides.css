@@ -195,3 +195,7 @@
 @media (max-width: 380px) {
   .stage-bar { grid-template-columns: 42px 50px minmax(45px, 1fr) 38px; gap: 5px; padding-inline: 8px; }
 }
+
+.score-formula.zero-score { grid-template-columns: 1fr; }
+.score-formula.zero-score span { color: #e34f5f; font-weight: 900; letter-spacing: .14em; }
+.score-formula.zero-score strong { color: #e34f5f; }
