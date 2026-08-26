@@ -3,7 +3,8 @@ const SUIT_CLASS=['suit-spade','suit-heart','suit-diamond','suit-club'];
 const COLOR_NAMES=['BLACK','RED','BLUE','GREEN'];
 const RANKS=['1','2','3','4','5','6','7','8','9'];
 const DICE_PATTERNS=[[5],[1,9],[1,5,9],[1,3,7,9],[1,3,5,7,9],[1,3,4,6,7,9],[1,3,4,5,6,7,9],[1,2,3,4,6,7,8,9],[1,2,3,4,5,6,7,8,9]];
-const ROWS=7,COLS=5,STAGE_SPINS=[0,3,4,5,6,7,8,10],HAND_SCORE={'Three of a Kind':300,'Four of a Kind':800,'Five of a Kind':1500};
+const ROWS=7,COLS=5,STAGE_SPINS=[0,3,4,5,6,7,8,10],HAND_SCORE={'Three of a Kind':500,'Four of a Kind':2000,'Five of a Kind':5000};
+const SPIN_SCORE=5000,TIME_PENALTY=10,SCORE_RULESET_START='2026-08-26T06:33:00Z';
 let grid=[],fix=[],selectedStage=1,score=0,sliceScore=0,spins=0,spinsLeft=0,drag=null,hands=[],chain=0,busy=false,startedAt=null,gameEnded=false,gameplayActive=false;
 const board=document.querySelector('#board'),spinBtn=document.querySelector('#spin-btn'),fx=document.querySelector('#fx'),toast=document.querySelector('#toast');
 function maxRankIndex(){return selectedStage<=2?5:8}
@@ -29,7 +30,7 @@ function clearHand(row){const hand=hands.find(h=>h.row===row);if(!hand)return;st
 function hasReliefMerge(){const maxRank=maxRankIndex();for(let col=0;col<4;col++){for(let a=0;a<ROWS;a++)for(let b=a+1;b<ROWS;b++)if(grid[col][a]&&grid[col][b]&&grid[col][a].rank===grid[col][b].rank)return true;for(let row=0;row<ROWS;row++)if(grid[col][row]&&fix.some(card=>card&&card.rank!==maxRank&&card.suit===grid[col][row].suit&&card.rank===grid[col][row].rank))return true}return hands.length>0}
 function flash(text){fx.textContent=text;fx.classList.remove('pop');void fx.offsetWidth;fx.classList.add('pop')}
 function showToast(text){toast.textContent=text;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1800)}
-const LEADERBOARD_KEY='merge-poker-leaderboard-v2-stage';
+const LEADERBOARD_KEY='merge-dice-leaderboard-v3-score-season';
 const backendConfig=window.MERGE_POKER_BACKEND||{};
 const leaderboardApi=backendConfig.url&&backendConfig.publishableKey&&window.supabase?.createClient
   ? window.supabase.createClient(backendConfig.url,backendConfig.publishableKey)
@@ -40,7 +41,7 @@ function loadLocalLeaderboard(){try{const data=JSON.parse(localStorage.getItem(s
 function saveLocalLeaderboard(entries){try{localStorage.setItem(stageLeaderboardKey(),JSON.stringify(entries.slice(0,100)))}catch{}}
 async function loadLeaderboard(){
   if(!leaderboardApi)return loadLocalLeaderboard();
-  const{data,error}=await leaderboardApi.from('leaderboard').select('player_name,score,slice_score,spins_left,play_time,created_at,stage').eq('stage',selectedStage).order('score',{ascending:false}).order('play_time',{ascending:true}).limit(100);
+  const{data,error}=await leaderboardApi.from('leaderboard').select('player_name,score,slice_score,spins_left,play_time,created_at,stage').eq('stage',selectedStage).gte('created_at',SCORE_RULESET_START).order('score',{ascending:false}).order('play_time',{ascending:true}).limit(100);
   if(error)throw error;
   return data.map(row=>({name:row.player_name,score:row.score,sliceScore:row.slice_score,spinsLeft:row.spins_left,elapsed:row.play_time,date:row.created_at}));
 }
@@ -52,9 +53,9 @@ async function persistScore(record,entries){
   }
   entries.push(record);entries.sort((a,b)=>b.score-a.score||a.elapsed-b.elapsed);saveLocalLeaderboard(entries);return entries.slice(0,100);
 }
-function getFinalScore(){const elapsed=Math.max(0,Math.floor((Date.now()-(startedAt??Date.now()))/1000));return{elapsed,finalScore:sliceScore+spinsLeft*1000-elapsed*10}}
+function getFinalScore(){const elapsed=Math.max(0,Math.floor((Date.now()-(startedAt??Date.now()))/1000));return{elapsed,finalScore:sliceScore+spinsLeft*SPIN_SCORE-elapsed*TIME_PENALTY}}
 function leaderboardHtml(entries){if(!entries.length)return'<p class="empty-board">아직 등록된 기록이 없습니다.</p>';return `<ol class="leaderboard">${entries.map((entry,index)=>`<li><b>${index+1}</b><span>${escapeHtml(entry.name)}</span><strong>${entry.score.toLocaleString()}</strong></li>`).join('')}</ol>`}
-function scoreFormulaHtml(result){return result.zeroed?'<div class="score-formula zero-score"><span>NO MOVES</span><strong>FINAL 0</strong></div>':`<div class="score-formula"><span>HAND ${sliceScore.toLocaleString()}</span><span>SPIN ${spinsLeft} × 1,000</span><span>TIME ${result.elapsed}s × 10</span><strong>FINAL ${result.finalScore.toLocaleString()}</strong></div>`}
+function scoreFormulaHtml(result){return result.zeroed?'<div class="score-formula zero-score"><span>NO MOVES</span><strong>FINAL 0</strong></div>':`<div class="score-formula"><span>HAND ${sliceScore.toLocaleString()}</span><span>SPIN ${spinsLeft} × ${SPIN_SCORE.toLocaleString()}</span><span>TIME ${result.elapsed}s × ${TIME_PENALTY}</span><strong>FINAL ${result.finalScore.toLocaleString()}</strong></div>`}
 function showLeaderboardResult(kicker,title,reason,result,entries){showModal(kicker,title,`<p>${reason}</p>${scoreFormulaHtml(result)}<h2>STAGE ${selectedStage} · ${leaderboardApi?'GLOBAL':'LOCAL'} TOP 100</h2>${leaderboardHtml(entries)}`,'단계 선택',showStageSelect)}
 async function finishGame(kicker,title,reason,{zeroScore=false}={}){
   if(gameEnded)return;gameEnded=true;busy=true;const result=zeroScore?{elapsed:0,finalScore:0,zeroed:true}:getFinalScore();if(zeroScore){score=0;document.querySelector('#score').textContent='0'}let entries;
@@ -70,7 +71,7 @@ function tutorialRow(ranks){return `<div class="tutorial-column-heads"><span>⚄
 function tutorialHtml(page){
   if(page===0)return `<div class="tutorial-page"><div class="tutorial-scene merge-scene"><div class="tutorial-source">${tutorialCard(4,3)}${tutorialCard(4,3)}</div><div class="tutorial-merge-arrow"><i>↗</i><span>DRAG &amp; MERGE</span></div><div class="tutorial-result">${tutorialCard(5,3)}<strong>PIP +1</strong></div></div><h2>같은 주사위끼리 머지</h2><p>같은 Color Line 안에서 색상과 눈이 같은 두 주사위를 드래그해 합칩니다. 합쳐진 주사위는 눈이 1 증가합니다.</p><p class="tutorial-note">Stage ${selectedStage}: D${maxRankValue()} · FIX ${maxRankValue()}는 머지 대상이 아닙니다.</p></div>`;
   if(page===1)return `<div class="tutorial-page"><div class="tutorial-board">${tutorialRow([3,3,3,6,Math.min(5,maxRankValue())])}<div class="tutorial-hand-ready">THREE OF A KIND · READY</div></div><h2>3·4·5개 동일 눈 핸드</h2><p>가로 5개 중 같은 눈이 3개 이상이면 HAND 네비게이터가 활성화됩니다.</p><div class="tutorial-score-list">${Object.entries(HAND_SCORE).map(([name,value])=>`<span>${name}<strong>+${value.toLocaleString()}</strong></span>`).join('')}</div></div>`;
-  return `<div class="tutorial-page"><div class="tutorial-board submit-board">${tutorialRow([4,4,4,Math.min(6,maxRankValue()),2])}<button class="tutorial-submit" type="button">THREE OF A KIND<strong>+300</strong><small>CLICK TO CLEAR</small></button></div><h2>HAND 네비게이터로 제출</h2><p>오른쪽에 활성화된 HAND 버튼을 누르면 해당 행의 주사위 다섯 개와 FIX 블록이 함께 제거됩니다.</p><div class="tutorial-rewards"><span>FIX <strong>−1</strong></span><span>SPIN <strong>+1</strong></span></div><p class="tutorial-note">FIX 라인을 모두 비우면 Stage Clear!</p></div>`;
+  return `<div class="tutorial-page"><div class="tutorial-board submit-board">${tutorialRow([4,4,4,Math.min(6,maxRankValue()),2])}<button class="tutorial-submit" type="button">THREE OF A KIND<strong>+${HAND_SCORE['Three of a Kind'].toLocaleString()}</strong><small>CLICK TO CLEAR</small></button></div><h2>HAND 네비게이터로 제출</h2><p>오른쪽에 활성화된 HAND 버튼을 누르면 해당 행의 주사위 다섯 개와 FIX 블록이 함께 제거됩니다.</p><div class="tutorial-rewards"><span>FIX <strong>−1</strong></span><span>SPIN <strong>+1</strong></span></div><p class="tutorial-note">FIX 라인을 모두 비우면 Stage Clear!</p></div>`;
 }
 function renderTutorial(){const last=tutorialPage===2;const dots=`<div class="tutorial-dots">${[0,1,2].map(index=>`<i class="${index===tutorialPage?'active':''}"></i>`).join('')}</div>`;showModal('HOW TO PLAY',`Game Guide · ${tutorialPage+1}/3`,tutorialHtml(tutorialPage)+dots,last?(startedAt===null?'게임 시작':'게임으로 돌아가기'):'다음',()=>{if(last){closeModal();if(!gameplayActive){gameplayActive=true;render()}return}tutorialPage++;renderTutorial()})}
 function openHelp(){tutorialPage=0;renderTutorial()}
