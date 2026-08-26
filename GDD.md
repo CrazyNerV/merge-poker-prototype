@@ -1,6 +1,17 @@
-# Merge Poker — Game Design Document
+# Merge Dice — Game Design Document (dice-variant)
 
 버전: v0.3 · 수정일: 2026-08-26
+
+브랜치: `dice-variant`
+
+## Dice Variant 규칙
+
+- 기존 4개 라인의 색상(Black, Red, Blue, Green)은 유지하고 주사위 눈으로 블록을 표기한다.
+- Stage 1~2는 D6 규칙으로 1~6만 생성하며 Max는 6이다.
+- Stage 3~7은 D9 규칙으로 1~9만 생성하며 Max는 9이다.
+- 각 규칙의 생성 가중치는 낮은 눈부터 `D6: 6~1`, `D9: 9~1`의 내림차순 Weight를 적용한다.
+- Max 눈끼리 Merge하면 두 주사위를 모두 제거하는 기존 Max Merge 규칙을 적용한다.
+- FIX의 Max 눈은 Merge Target이 될 수 없고 Hand 제거로만 없앨 수 있다.
 
 ## 1. 게임 목표
 
@@ -13,9 +24,9 @@
 
 게임 시작 전에 Stage 1~7 중 하나를 선택한다. 게임 시작 시 Production 4개 라인의 28칸은 모두 채우고, FIX 라인은 선택한 Stage와 같은 수량만 채운다.
 
-- Production Line은 각 라인의 고정 Suit와 Rank 가중치로 채운다.
-- FIX Line은 하단부터 `선택 Stage 수`만큼 랜덤 Suit와 Rank 가중치로 채운다.
-- 모든 시작 카드는 기존 Rank 가중치 규칙에 따라 서로 독립적으로 랜덤 생성하며, 특정 Hand를 보장하지 않는다.
+- Production Line은 각 라인의 고정 Color와 주사위 눈 가중치로 채운다.
+- FIX Line은 하단부터 `선택 Stage 수`만큼 랜덤 Color와 주사위 눈 가중치로 채운다.
+- 모든 시작 주사위는 Stage별 D6/D9 가중치 규칙에 따라 서로 독립적으로 랜덤 생성하며, 특정 Hand를 보장하지 않는다.
 - Stage별 시작 SPIN은 아래 표를 따른다.
 
 | Stage | 시작 FIX | 시작 SPIN |
@@ -30,16 +41,16 @@
 
 ## 3. 유효 Hand
 
-Hand는 가로 Row의 카드 5장을 기준으로 Rank만 판정한다. 제거 가능한 Hand는 아래 3종뿐이다.
+Hand는 가로 Row의 주사위 5개를 기준으로 눈만 판정한다. 제거 가능한 Hand는 아래 3종뿐이다.
 
 | Hand | 조건 | Hand 점수 | SPIN 보너스 포함 실질 가치 |
 |---|---|---:|---:|
-| Three of a Kind | 동일 Rank 3장 | 300 | 1,300 |
-| Four of a Kind | 동일 Rank 4장 | 800 | 1,800 |
-| Five of a Kind | 동일 Rank 5장 | 1,500 | 2,500 |
+| Three of a Kind | 동일 눈 3개 | 300 | 1,300 |
+| Four of a Kind | 동일 눈 4개 | 800 | 1,800 |
+| Five of a Kind | 동일 눈 5개 | 1,500 | 2,500 |
 
 - Pair, Two Pair, Straight, Full House는 Hand로 인정하지 않는다.
-- 동시에 여러 조건을 만족하면 가장 높은 동일 Rank 개수를 적용한다.
+- 동시에 여러 조건을 만족하면 가장 높은 동일 눈 개수를 적용한다.
 - Hand 제거 시 SPIN 기회를 1회 얻으므로 Hand 점수는 잔여 SPIN의 최종 점수 가치 1,000점을 고려해 책정했다.
 - 연속 제거 시 기존 Chain 배율을 Hand 점수에 적용한다.
 
@@ -50,7 +61,7 @@ Hand는 가로 Row의 카드 5장을 기준으로 Rank만 판정한다. 제거 �
 1. 유효 Hand가 완성되면 해당 Row와 오른쪽 HAND 네비게이터를 강조한다.
 2. HAND 네비게이터에 Hand 이름, 예상 획득 점수, `CLICK`을 표시한다.
 3. 플레이어가 활성화된 HAND 네비게이터를 클릭 또는 탭하면 해당 Row를 제거한다.
-4. Production Card 4장과 같은 Row의 FIX Card 1장을 함께 제거한다.
+4. Production 주사위 4개와 같은 Row의 FIX 주사위 1개를 함께 제거한다.
 5. Production과 FIX 라인에 Gravity를 적용한다.
 6. 성공한 Hand 제거마다 SPIN 기회 1회를 지급한다.
 
@@ -60,22 +71,22 @@ Hand는 가로 Row의 카드 5장을 기준으로 Rank만 판정한다. 제거 �
 
 - 선택한 Stage에 대응하는 3~10회의 시작 SPIN 기회를 제공한다.
 - SPIN 1회당 기회 1회를 차감한다.
-- SPIN은 Production Line의 모든 빈칸을 각 Line의 Suit 카드로 채운다.
-- FIX Line에는 SPIN으로 새 카드를 추가하지 않는다.
+- SPIN은 Production Line의 모든 빈칸을 각 Line 색상의 주사위로 채운다.
+- FIX Line에는 SPIN으로 새 주사위를 추가하지 않는다.
 - 보드에 Production 빈칸이 없으면 SPIN할 수 없다.
 
 ## 6. Merge와 FIX
 
-- 같은 Suit·같은 Rank의 Production Card를 같은 Line 안에서 Merge할 수 있다.
-- 조건이 같은 Production Card를 FIX Card에 Merge할 수 있다.
-- FIX Rank 9는 Merge Target이 될 수 없으며 Hand 제거로만 없앨 수 있다.
+- 같은 Color·같은 눈의 Production 주사위를 같은 Line 안에서 Merge할 수 있다.
+- 조건이 같은 Production 주사위를 FIX 주사위에 Merge할 수 있다.
+- Stage 1~2의 FIX 6, Stage 3~7의 FIX 9는 Merge Target이 될 수 없으며 Hand 제거로만 없앨 수 있다.
 - Merge 또는 Hand 제거 후 해당 라인에 Gravity를 적용한다.
 
 ## 7. 핵심 게임 흐름
 
-1. Stage 1~7을 선택하고 Production 28장, Stage 수만큼의 FIX, Stage별 SPIN으로 시작한다.
+1. Stage 1~7을 선택하고 Production 주사위 28개, Stage 수만큼의 FIX, Stage별 SPIN으로 시작한다.
 2. 무작위 시작 보드에서 가능한 Merge 또는 완성된 Hand를 탐색한다.
-3. Merge로 Rank와 Row 배열을 조정한다.
+3. Merge로 주사위 눈과 Row 배열을 조정한다.
 4. 빈칸이 생기면 필요에 따라 SPIN으로 Production 영역을 다시 채운다.
 5. Three/Four/Five of a Kind를 완성하고 HAND 네비게이터로 제거한다.
 6. Hand 제거로 FIX를 하나씩 줄이고 SPIN을 회복한다.
@@ -97,7 +108,7 @@ Hand는 가로 Row의 카드 5장을 기준으로 Rank만 판정한다. 제거 �
 ## 9. 구현 판정 기준
 
 - Row 수: 7
-- 시작 카드 수: Production 28장 + FIX 1~7장(Stage와 동일)
+- 시작 주사위 수: Production 28개 + FIX 1~7개(Stage와 동일)
 - Stage별 시작 SPIN: 3 / 4 / 5 / 6 / 7 / 8 / 10
 - 시작 보장 Hand: 없음
 - 유효 Hand: Three / Four / Five of a Kind

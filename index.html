@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta name="theme-color" content="#101a28">
-  <meta name="description" content="4개의 카드 릴을 돌리고 머지하여 포커 족보를 완성하는 모바일 퍼즐">
-  <title>Merge Poker — Prototype v0.2</title>
+  <meta name="description" content="4색 주사위를 머지하여 핸드를 완성하는 모바일 퍼즐">
+  <title>Merge Dice — Branch Prototype</title>
   <link rel="stylesheet" href="style.css?v=20260826-5">
-  <link rel="stylesheet" href="card-overrides.css?v=20260826-7">
+  <link rel="stylesheet" href="card-overrides.css?v=20260826-dice-2">
 </head>
 <body>
   <main class="game">
     <header>
-      <div class="brand"><span>MERGE</span><strong>POKER</strong><small>PROTOTYPE v0.2</small></div>
+      <div class="brand"><span>MERGE</span><strong>DICE</strong><small>D6 / D9 BRANCH</small></div>
       <div class="score-box"><span>SCORE</span><strong id="score">0</strong></div>
       <a class="round-btn leaderboard-link" href="leaderboard.html" aria-label="글로벌 리더보드">★</a>
       <button id="help-btn" class="round-btn" aria-label="게임 방법">?</button>
@@ -25,9 +25,9 @@
       <div><span>SPIN</span><strong id="spin-count">0</strong></div>
     </section>
 
-    <section class="table" aria-label="카드 보드">
+    <section class="table" aria-label="주사위 보드">
       <div class="column-heads" aria-hidden="true">
-        <span class="spade">♠</span><span class="heart">♥</span><span class="diamond">♦</span><span class="club">♣</span><span class="fix">FIX</span><span class="hand-head">HAND</span>
+        <span class="spade">⚄</span><span class="heart">⚄</span><span class="diamond">⚄</span><span class="club">⚄</span><span class="fix">FIX</span><span class="hand-head">HAND</span>
       </div>
       <div class="board-area">
         <div id="board" class="board"></div>
@@ -42,7 +42,7 @@
     </section>
 
     <section class="legend">
-      <span><i class="drag-icon">↗</i> 같은 카드를 드래그해 MERGE</span>
+      <span><i class="drag-icon">↗</i> 같은 색·눈의 주사위를 MERGE</span>
       <span><i class="slice-icon">✓</i> 활성화된 HAND 버튼을 눌러 제거</span>
     </section>
   </main>
@@ -50,13 +50,13 @@
   <div id="toast" class="toast" aria-live="polite"></div>
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
-      <p id="modal-kicker">HOW TO PLAY</p><h1 id="modal-title">Merge Poker</h1>
+      <p id="modal-kicker">HOW TO PLAY</p><h1 id="modal-title">Merge Dice</h1>
       <div id="modal-body" class="modal-body"></div>
       <button id="modal-btn">게임 시작</button>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="backend-config.js?v=eda8e82"></script>
-  <script src="game.js?v=20260826-6"></script>
+  <script src="game.js?v=20260826-dice-1"></script>
 </body>
 </html>
