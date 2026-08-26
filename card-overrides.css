@@ -21,6 +21,26 @@
   display: none;
 }
 
+.gem-card {
+  overflow: visible;
+  background: radial-gradient(circle, rgba(255,255,255,.12), rgba(8,14,24,.88) 72%);
+}
+
+.gem {
+  width: 100%;
+  height: 100%;
+  background-image: url('assets/gem-upgrades-4x9.png');
+  background-repeat: no-repeat;
+  background-size: 1000% 400%;
+  background-position: var(--gem-x) var(--gem-y);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.72));
+  pointer-events: none;
+}
+
+.fix-card .gem { transform: scale(.88); }
+.reel .reel-gem { width: 42px; height: 42px; margin: -5px auto -3px; }
+.reel strong { display: none; }
+
 .card .fix-tag {
   position: absolute;
   right: 5px;
