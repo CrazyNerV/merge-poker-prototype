@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta name="theme-color" content="#101a28">
   <meta name="description" content="4개의 카드 릴을 돌리고 머지하여 포커 족보를 완성하는 모바일 퍼즐">
-  <title>Merge Poker — Prototype v0.1</title>
-  <link rel="stylesheet" href="style.css?v=b2eb3bd">
-  <link rel="stylesheet" href="card-overrides.css?v=20260825-1">
+  <title>Merge Poker — Prototype v0.2</title>
+  <link rel="stylesheet" href="style.css?v=20260826-2">
+  <link rel="stylesheet" href="card-overrides.css?v=20260826-2">
 </head>
 <body>
   <main class="game">
     <header>
-      <div class="brand"><span>MERGE</span><strong>POKER</strong><small>PROTOTYPE v0.1</small></div>
+      <div class="brand"><span>MERGE</span><strong>POKER</strong><small>PROTOTYPE v0.2</small></div>
       <div class="score-box"><span>SCORE</span><strong id="score">0</strong></div>
       <button id="help-btn" class="round-btn" aria-label="게임 방법">?</button>
     </header>
@@ -41,7 +41,7 @@
 
     <section class="legend">
       <span><i class="drag-icon">↗</i> 같은 카드를 드래그해 MERGE</span>
-      <span><i class="slice-icon">―</i> 빛나는 ROW를 가로로 SWIPE</span>
+      <span><i class="slice-icon">✓</i> 활성화된 HAND 버튼을 눌러 제거</span>
     </section>
   </main>
 
@@ -55,6 +55,6 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="backend-config.js?v=eda8e82"></script>
-  <script src="game.js?v=ead75f4"></script>
+  <script src="game.js?v=20260826-2"></script>
 </body>
 </html>
