@@ -199,3 +199,5 @@
 .score-formula.zero-score { grid-template-columns: 1fr; }
 .score-formula.zero-score span { color: #e34f5f; font-weight: 900; letter-spacing: .14em; }
 .score-formula.zero-score strong { color: #e34f5f; }
+
+.leaderboard-link { display: grid; place-items: center; color: #ffc85c; text-decoration: none; font-size: 13px; }

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101a28">
+  <meta name="description" content="Merge Poker 단계별 글로벌 Top 100 리더보드">
+  <title>Merge Poker — Leaderboard</title>
+  <link rel="stylesheet" href="leaderboard.css?v=20260826-1">
+</head>
+<body>
+  <main class="leaderboard-page">
+    <header class="leaderboard-header">
+      <div class="brand"><span>MERGE</span><strong>POKER</strong><small>GLOBAL RANKING</small></div>
+      <a class="game-link" href="index.html">게임으로</a>
+    </header>
+
+    <section class="hero">
+      <p>GLOBAL LEADERBOARD</p>
+      <h1>Stage <span id="stage-title">7</span> · Top 100</h1>
+      <div id="stage-tabs" class="stage-tabs" aria-label="단계 선택"></div>
+    </section>
+
+    <section class="ranking-panel" aria-live="polite">
+      <div class="ranking-head">
+        <div><span>CURRENT STAGE</span><strong id="stage-summary">STAGE 7</strong></div>
+        <button id="refresh-btn" type="button">새로고침</button>
+      </div>
+      <div class="column-labels" aria-hidden="true"><span>RANK</span><span>PLAYER</span><span>TIME</span><span>SCORE</span></div>
+      <ol id="ranking-list" class="ranking-list"></ol>
+      <div id="ranking-state" class="ranking-state">랭킹을 불러오는 중…</div>
+    </section>
+
+    <footer>점수 내림차순 · 동점이면 플레이 시간이 짧은 순서</footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="backend-config.js?v=eda8e82"></script>
+  <script src="leaderboard.js?v=20260826-1"></script>
+</body>
+</html>

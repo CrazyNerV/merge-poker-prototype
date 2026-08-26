@@ -10,3 +10,5 @@ Mobile merge poker puzzle prototype.
 4. Commit the configuration change and wait for GitHub Pages to redeploy.
 
 The publishable key is intended for browser use with RLS. Never commit a Supabase secret or service-role key. Rankings are queried independently for each stage and capped at Top 100. If the backend configuration is empty, unavailable, or has not received the latest schema migration, the game falls back to a stage-specific browser-local leaderboard.
+
+The standalone leaderboard is available at `leaderboard.html`; use `leaderboard.html?stage=1` through `leaderboard.html?stage=7` for direct stage links.
